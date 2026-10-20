@@ -20,21 +20,30 @@
   ol{margin:0;padding-left:1.3em}
   .note{font-size:13px;color:#666}
   #wait{text-align:center;padding:40px 16px;color:#2e5e4e}
+  #app{position:fixed;inset:0;width:100%;height:100%;border:0;display:none;background:#f4f6f3}
 </style>
 </head>
 <body>
 <header>販売員シフト管理</header>
 <div id="wait">開いています…<br><a href="#" id="go0">開かないときはここを押す</a></div>
+<iframe id="app" title="販売員シフト管理"></iframe>
 <div class="wrap" id="guide" style="display:none">
   <img class="icon" src="apple-touch-icon.png" alt="">
   <p style="text-align:center;margin:0"><b>このページをホーム画面に追加すると、<br>次からはアイコンを押すだけで開けます。</b></p>
   <a class="go" id="go1" href="#">システムを開く</a>
   <div class="box">
-    <h2>iPhoneの人</h2>
+    <h2>iPhoneでSafariの人</h2>
     <ol>
-      <li><b>Safari</b>でこのページを開く</li>
       <li>下の<b>共有ボタン</b>（四角に上向きの矢印）を押す</li>
       <li>「<b>ホーム画面に追加</b>」→「<b>追加</b>」</li>
+    </ol>
+  </div>
+  <div class="box">
+    <h2>iPhoneでChromeの人</h2>
+    <ol>
+      <li>右上の<b>共有ボタン</b>（四角に上向きの矢印）を押す</li>
+      <li>「<b>表示を増やす</b>」を押す</li>
+      <li>下のほうへ動かして「<b>ホーム画面に追加</b>」→「<b>追加</b>」</li>
     </ol>
   </div>
   <div class="box">
@@ -51,7 +60,7 @@
 // 本体（販売員シフト管理）のURL。変わったときはここだけ直す
 var APP = 'https://script.google.com/macros/s/AKfycbwn2ppbT25y7K0n46faTL_9klsixAMuUuXFgrdPY0Qdp9nJxIOh4k0WIj4TCvhJ95EKlg/exec';
 document.getElementById('go0').href = APP;
-document.getElementById('go1').href = APP;
+document.getElementById('go1').href = './';
 if (/[?&]a=1/.test(location.search)) {
   // 案内用のURL（…?a=1）で開いたとき：追加のしかたを出す。
   // アドレスは案内なしの形に戻しておく（ホーム画面に追加したとき、押すとすぐ開く形で保存されるように）
@@ -59,8 +68,11 @@ if (/[?&]a=1/.test(location.search)) {
   document.getElementById('guide').style.display = 'block';
   try { history.replaceState(null, '', location.pathname); } catch (e) {}
 } else {
-  // ホーム画面のアイコンから開いたとき：すぐ本体へ
-  location.replace(APP);
+  // ホーム画面のアイコンから開いたとき：本体をこのページの中に全画面で出す
+  // （枠の中に出すと、上の「Google Apps Script のユーザーによって作成…」の帯が出ないため）
+  var f = document.getElementById('app');
+  f.onload = function () { document.getElementById('wait').style.display = 'none'; document.querySelector('header').style.display = 'none'; f.style.display = 'block'; };
+  f.src = APP;
 }
 </script>
 </body>
