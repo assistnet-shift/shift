@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>週間シフト（デモ）</title>
+<link rel="icon" href="../favicon.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800&display=swap">
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;padding:0}
+[hidden]{display:none!important}
+/* 紙の週の表に寄せる：横に月〜金、日ごとに「休む人（赤）→ヘルプ（黒）」を縦に並べる。本番と同じ白地・緑の帯で固定 */
+:root{
+  --bg:#ffffff; --band:#2E7D4F; --soft:#EEF7EE; --ink:#1d2a22; --mute:#6b7a70;
+  --line:#c9d6cd; --red:#c62828; --redsoft:#fdecec; --draft:#7a8a80; --warn:#d97706; --warnsoft:#fff4e0;
+  --round:"M PLUS Rounded 1c","Hiragino Maru Gothic ProN","Hiragino Sans",sans-serif;
+  --body:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic UI","Meiryo",sans-serif;
+  color-scheme:light;
+}
+html,body{overscroll-behavior:none;overflow-x:hidden}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:14px}
+.band{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--band);color:#fff;
+  padding-block:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  font-family:var(--round);font-weight:800;font-size:17px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--band)}
+.band small{font-weight:500;font-size:12px;opacity:.85}
+main{max-width:760px;margin:0 auto;padding-block:12px 28px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:12px}
+.demo{background:var(--warnsoft);color:#7a4b00;border-radius:8px;padding:8px 10px;font-size:12.5px;line-height:1.5}
+.bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.toggle{display:flex;border:2px solid var(--band);border-radius:999px;overflow:hidden}
+.toggle button{border:0;background:#fff;color:var(--band);font-family:var(--round);font-weight:700;font-size:14px;padding:7px 14px;cursor:pointer}
+.toggle button[aria-pressed="true"]{background:var(--band);color:#fff}
+.week{display:flex;align-items:center;gap:6px;margin-left:auto}
+.week button{border:1px solid var(--line);background:#fff;border-radius:8px;width:34px;height:34px;font-size:16px;cursor:pointer;color:var(--ink)}
+.week b{font-family:var(--round);font-size:15px;min-width:92px;text-align:center;font-variant-numeric:tabular-nums}
+button:focus-visible{outline:3px solid var(--warn);outline-offset:2px}
+.act{display:flex;gap:8px;flex-wrap:wrap}
+.btn{border:0;border-radius:10px;background:var(--band);color:#fff;font-family:var(--round);font-weight:700;font-size:14px;padding:10px 14px;cursor:pointer}
+.btn.sub{background:#fff;color:var(--band);border:2px solid var(--band)}
+
+/* かんたん表示 */
+.paper{border:2px solid var(--ink);border-radius:4px;overflow:hidden}
+.grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr))}
+.hd{border-right:1px solid var(--line);border-bottom:2px solid var(--ink);text-align:center;padding:5px 2px;background:var(--soft)}
+.hd:last-child,.col:last-child{border-right:0}
+.hd b{display:block;font-family:var(--round);font-size:17px;font-variant-numeric:tabular-nums}
+.hd span{font-size:12px;color:var(--mute)}
+.col{border-right:1px solid var(--line);padding:4px 3px;display:flex;flex-direction:column;gap:4px;min-height:220px}
+.pair{border:0;background:transparent;border-bottom:1px dashed var(--line);padding:3px 1px 5px;cursor:pointer;text-align:center;font-family:var(--body);border-radius:4px;color:var(--ink)}
+.pair:hover{background:var(--soft)}
+.pair .r{display:block;color:var(--red);font-weight:700;font-size:15px;line-height:1.25}
+.pair .h{display:block;font-size:13px;color:var(--ink);line-height:1.3;margin-top:1px}
+.pair.open{box-shadow:inset 0 0 0 2px #f2c200}
+.pair.draftc{outline:2px dashed #8a968e;outline-offset:-2px}
+.freebtn.sel{background:#e8f1f8;outline:3px solid #1f5f8b;border-radius:4px;text-decoration:none}
+.kyan{display:inline-block;text-decoration:none;background:var(--warn);color:#fff;font-size:10px;font-weight:700;border-radius:4px;padding:0 4px;margin-left:2px;vertical-align:2px;font-style:normal}
+.pair.sel{box-shadow:inset 0 0 0 3px #1f5f8b;background:#e8f1f8}
+.btn.on{background:#1f5f8b;color:#fff;border-color:#1f5f8b}
+.hint{background:#e8f1f8;color:#1f3f5b;border-radius:8px;padding:8px 10px;font-size:13px}
+.swapbar{position:fixed;left:0;right:0;bottom:0;z-index:25;background:#1f3f5b;color:#fff;display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;padding-block:12px calc(12px + env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));font-size:14px}
+.swapbar b{flex:1 1 100%;text-align:center}
+.swapbar button{border:0;border-radius:10px;font-family:var(--round);font-weight:700;font-size:15px;padding:10px 18px;cursor:pointer}
+.seg{display:flex;width:100%;border:2px solid #1f5f8b;border-radius:10px;overflow:hidden;margin-bottom:4px}
+.seg button{flex:1;border:0;background:#fff;color:#1f5f8b;font-family:var(--round);font-weight:700;font-size:14px;padding:8px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:#1f5f8b;color:#fff}
+.pair .h.none{display:inline-block;background:#ffd400;color:#2b2200;font-weight:800;font-size:13px;border-radius:5px;padding:1px 7px;margin-top:3px;letter-spacing:.05em}
+.pair .h.fix{display:inline-block;background:#d7ecdf;color:#14532d;font-weight:800;border-radius:5px;padding:1px 5px;margin-top:2px}
+.pair .h.draft{color:var(--draft);border:1.5px dashed var(--draft);border-radius:5px;padding:0 4px;display:inline-block;margin-top:2px}
+.pair .h.draft::before{content:"案 ";font-size:10.5px}
+.pair.warnok .r{color:var(--mute);text-decoration:line-through;font-weight:500}
+.pair.warnok .h{color:var(--mute);font-size:11.5px}
+.cand.move{background:#fff;color:var(--band);border:2px solid var(--band)}
+.pair .h.fix small{font-size:9.5px;font-weight:700;margin-left:2px;color:#8a5a00}
+.sheet.wmode{border-top:6px solid var(--warn);background:#fffaf2}
+.sheet.wmode h3{color:#9a4d00}
+.cand.wbtn{background:var(--warn);width:100%;text-align:left;display:flex;flex-direction:column;gap:2px;padding:12px 14px}
+.cand.wbtn small{font-family:var(--body);font-weight:500;font-size:12.5px;opacity:.95}
+.cand.wbtn.alt{background:#fff;color:#9a4d00;border:2px solid var(--warn)}
+.sheet.fmode{border-top:6px solid #5b6b8a}
+.grp{width:100%;font-size:12px;color:var(--mute);margin-top:2px}
+.cand.ouenbtn{background:#fff;color:var(--band);border:2px solid var(--band);font-size:13.5px;padding:8px 12px}
+.cand.yukyubtn{background:#5b6b8a}
+.cand.flex{background:#fff;color:#8a5a00;border:2px solid #d9a441}
+.cand.plain{background:#fff;color:var(--ink);border:2px solid var(--line)}
+.ouen{border:1.5px solid var(--band);background:#fff;border-radius:6px;padding:3px 2px;cursor:pointer;display:flex;flex-direction:column;align-items:center;line-height:1.25;font-family:var(--body)}
+.ouen span{font-size:10px;color:#fff;background:var(--band);border-radius:3px;padding:0 4px}
+.ouen b{font-size:13px;color:#14532d}
+.ouen em{font-style:normal;font-size:10.5px;color:var(--mute);word-break:break-all}
+.free span{display:block;font-size:10.5px}
+.freebtn{border:0;background:transparent;color:var(--ink);font-family:var(--body);font-size:12px;text-decoration:underline dotted;cursor:pointer;padding:2px 3px;display:inline-block}
+.pair.warn{background:var(--warnsoft)}
+.pair.warn .r{color:var(--warn);text-decoration:line-through}
+.pair.warn .h{color:var(--warn);font-weight:700;font-size:12px}
+.free{margin-top:auto;font-size:11.5px;color:var(--mute);text-align:center;line-height:1.35;padding-top:4px;border-top:1px solid var(--line)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--mute)}
+.legend i{font-style:normal;font-weight:700}
+
+/* くわしく：かんたんと同じマス（赤＝休む人・下にヘルプ）を、店の行に並べる */
+.wrap{overflow-x:auto;overscroll-behavior-x:contain;border:2px solid var(--ink);border-radius:4px}
+table{border-collapse:collapse;min-width:600px;width:100%;font-size:12.5px;table-layout:fixed}
+th,td{border:1px solid var(--line);padding:3px;text-align:center;vertical-align:top}
+th{background:var(--soft);font-family:var(--round);border-bottom:2px solid var(--ink)}
+th.store,td.store{position:sticky;left:0;z-index:2;background:#fafcfa;width:92px;text-align:left;font-weight:700;font-size:12px;line-height:1.3}
+th b{display:block;font-family:var(--round);font-size:17px;font-variant-numeric:tabular-nums}
+th span{font-size:12px;color:var(--mute);font-weight:500}
+td .pair,td .ouen{width:100%;display:block;margin-bottom:3px}
+td.hol{background:#f2f2f2;color:var(--mute);font-size:12px}
+.okc{display:block;color:var(--mute);font-size:12px;padding:5px 0}
+.hiban{display:block;font-size:11px;color:#5b6b8a;margin-top:2px}
+tr.freerow td{background:#fafcfa}
+tr.freerow .free{border-top:0;margin-top:0;padding-top:0}
+.kbar{display:flex;justify-content:flex-end;margin-bottom:6px}
+.kbar .btn{font-size:13px;padding:7px 12px}
+
+/* 候補の窓 */
+.sheet{position:fixed;inset:auto 0 0 0;z-index:20;background:#fff;border-top:3px solid var(--band);border-radius:14px 14px 0 0;box-shadow:0 -6px 24px rgba(0,0,0,.18);
+  padding-block:14px calc(16px + env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));max-height:75%;overflow:auto}
+.sheet h3{margin:0 0 4px;font-family:var(--round);font-size:16px}
+.sheet p{margin:0 0 10px;color:var(--mute);font-size:12.5px}
+.cands{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.cand{border:0;border-radius:10px;background:var(--band);color:#fff;font-family:var(--round);font-weight:700;font-size:15px;padding:10px 14px;cursor:pointer}
+.cand[disabled]{background:#e6ebe8;color:var(--mute);cursor:default;font-weight:500;font-size:13px}
+.shade{position:fixed;inset:0;z-index:19;background:rgba(0,0,0,.25)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:30;background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:13.5px;max-width:90%}
+</style>
+</head>
+<body>
+
+<div class="band"><span>週間シフト</span><small>販売員シフト管理（練習用デモ）</small></div>
+
+<main>
+  <div class="demo">練習用のデモです。名前・休み・ヘルプは見本で、本物のデータにはつながっていません。何を押しても本番には影響しないので、自由に試してください。開き直すと元に戻ります。「くわしく」は、かんたんと同じマス・同じ操作を、左に店の名前を付けて並べたものです（非番の人も出ます）。</div>
+
+  <div class="bar">
+    <div class="toggle" role="group" aria-label="表示の切り替え">
+      <button id="mKantan" type="button">かんたん</button>
+      <button id="mKuwashiku" type="button">くわしく</button>
+    </div>
+    <div class="week">
+      <button id="prev" type="button" aria-label="前の週">‹</button>
+      <b id="wlabel"></b>
+      <button id="next" type="button" aria-label="次の週">›</button>
+    </div>
+  </div>
+
+  <div class="act">
+    <button class="btn sub" id="auto" type="button">案を自動で入れる</button>
+    <button class="btn" id="fixall" type="button" hidden>✓ 案を全部決める</button>
+    <button class="btn sub" id="undo" type="button" hidden>↩ 案を取り消す</button>
+    <button class="btn sub" id="swapBtn" type="button">⇄ 2か所を押して入れ替え</button>
+  </div>
+  <div class="hint" id="swapHint" hidden>入れ替えたいマスを、2つ順に押してください（同じ日の中）。1回入れ替えると、自動で元に戻ります。下の「空き」の人も押せます。</div>
+
+  <section id="vKantan">
+    <div class="paper"><div class="grid" id="kgrid"></div></div>
+  </section>
+
+  <section id="vKuwashiku" hidden>
+    <div class="kbar"><button class="btn sub" id="allStores" type="button">全店を見る</button></div>
+    <div class="wrap"><table id="ktable"></table></div>
+  </section>
+
+  <div class="legend" id="legend">
+    <span><i style="color:var(--red)">赤</i>＝休む人</span>
+    <span><i style="background:#d7ecdf;color:#14532d;padding:0 4px;border-radius:4px">緑の名前</i>＝決まったヘルプ</span>
+    <span><i style="outline:2px dashed #8a968e;padding:0 4px">灰色の点線の枠</i>＝案（まだ決めていない）</span>
+    <span><i style="background:#ffd400;color:#2b2200;padding:0 5px;border-radius:4px">未定</i>＝ヘルプが決まっていない（黄色で目立たせる）</span>
+    <span><i class="kyan" style="vertical-align:0">休キャン</i>＝休みが取り消された（押してヘルプを外すか決める）</span>
+    <span>下の「空き」＝行き先のないヘルプ（押すと 応援・有給・待機 を選べる）</span>
+    <span><i style="color:var(--band)">応援</i>＝2人目で入る</span>
+    <span><i style="color:#8a5a00">手当</i>＝ヘルプ手当が付く人（奥田さん。休みの日でも選べる）</span>
+  </div>
+
+  <div class="act">
+    <button class="btn" id="sToday" type="button">今日の行き先を送る</button>
+    <button class="btn" id="sTom" type="button">明日の行き先を送る</button>
+    <button class="btn" id="sWeek" type="button">この週の予定を送る</button>
+  </div>
+</main>
+
+<div class="shade" id="shade" hidden></div>
+<div class="sheet" id="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="shTitle">
+  <h3 id="shTitle"></h3>
+  <p id="shSub"></p>
+  <div class="cands" id="shCands"></div>
+  <div class="act">
+    <button class="btn sub" id="shClear" type="button">元に戻す（ヘルプを外す）</button>
+    <button class="btn sub" id="shClose" type="button">閉じる</button>
+  </div>
+</div>
+<div class="swapbar" id="swapbar" hidden></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+// ヘルプの順番（本番のヘルプ設定と同じ並び）。足達さんは「入れる日だけ」
+var HELP=['足達','猪本','馬目','中路','小野間','田知本'];
+var EXTRA_DAYS={'足達':{'11/18':1,'11/25':1}};
+// ヘルプの順番には入れず「ほかの販売員」から選ぶ人。自分の休みの日でも都合がつけば入れる（ほかの店に入った日はヘルプ手当）
+var FLEX=['奥田'];
+var TEATE={'奥田':1};
+// 応援（2人目）で入れる店の見本
+var STORES=['住友中野ビル','新宿野村ビル','汐留','渋谷クロス','太陽生命品川','大手町','赤坂','豊洲'];
+// くわしく：「全店を見る」で足す、この週ふつうに出勤の店（見本）
+var ALLSTORES=[{s:'第一生命ビル',t:'横尾'},{s:'センタービル',t:'実方'},{s:'蒲田アロマスクエア',t:'田中'},{s:'パレスサイドビル',t:'小山'}];
+// 非番（その店の担当で、この日は出ない人＝頼める相手）の見本
+var HIBAN={'豊洲':{'火':'舘岡','木':'舘岡'},'第一生命ビル':{'水':'佐々木'}};
+var showAll=false;
+// 見本の週（11/16〜20・11/23〜27）
+var WEEKS=[
+ {label:'11/16〜11/20',days:[
+  {d:'16',w:'月',rest:[{n:'高木',s:'汐留',h:'小野間',st:'fix'},{n:'趙',s:'総務省',h:'中路',st:'fix'},{n:'辻',s:'渋谷クロス',h:'田知本',st:'fix'},{n:'阪本',s:'大森',h:null}]},
+  {d:'17',w:'火',rest:[{n:'奥田',s:'住友中野ビル',h:'田知本',st:'fix'},{n:'今西',s:'虎ノ門ツイン',h:'猪本',st:'fix'},{n:'田川',s:'赤坂',h:'馬目',st:'fix'},{n:'辻',s:'渋谷クロス',h:'中路',st:'fix'},{n:'田中',s:'丸の内',h:null}]},
+  {d:'18',w:'水',rest:[{n:'森',s:'太陽生命品川',h:'小野間',st:'fix'},{n:'今井',s:'豊洲',h:'中路',st:'fix'},{n:'田中',s:'丸の内',h:null},{n:'内山',s:'新宿野村ビル',h:'猪本',st:'draft'}]},
+  {d:'19',w:'木',rest:[{n:'奥田',s:'住友中野ビル',h:'田知本',st:'fix'},{n:'森',s:'太陽生命品川',h:'小野間',st:'fix'},{n:'高木',s:'汐留',h:'中路',st:'fix'},{n:'千葉',s:'三井',h:null},{n:'平野',s:'テレコム',h:'馬目',st:'warn'}]},
+  {d:'20',w:'金',rest:[{n:'森',s:'太陽生命品川',h:'小野間',st:'fix'},{n:'申',s:'大手町',h:null}]}
+ ]},
+ {label:'11/23〜11/27',days:[
+  {d:'23',w:'月',holiday:'勤労感謝の日（休業）',rest:[]},
+  {d:'24',w:'火',rest:[{n:'奥田',s:'住友中野ビル',h:'田知本',st:'fix'},{n:'斉藤',s:'赤坂',h:'小野間',st:'fix'},{n:'今井',s:'豊洲',h:'中路',st:'fix'},{n:'田中',s:'丸の内',h:'馬目',st:'fix'}]},
+  {d:'25',w:'水',rest:[{n:'斉藤',s:'赤坂',h:'小野間',st:'fix'},{n:'辻',s:'渋谷クロス',h:null},{n:'田川',s:'赤坂',h:null},{n:'馬目',s:'ヘルプ',h:null,helper:true}]},
+  {d:'26',w:'木',rest:[{n:'奥田',s:'住友中野ビル',h:null},{n:'斉藤',s:'赤坂',h:'中路',st:'fix'},{n:'山口',s:'大森',h:'小野間',st:'fix'},{n:'千葉',s:'三井',h:null}]},
+  {d:'27',w:'金',rest:[{n:'斉藤',s:'赤坂',h:'小野間',st:'fix'},{n:'申',s:'大手町',h:'中路',st:'fix'}]}
+ ]}
+];
+var wi=0, mode='kantan', undoSnap=null, cur=null;
+try{var m=localStorage.getItem('shiftDemoMode'); if(m==='kantan'||m==='kuwashiku') mode=m;}catch(e){}
+
+function $(id){return document.getElementById(id)}
+function esc(t){return String(t).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function restNames(day){ return day.rest.filter(function(r){return r.st!=='warn'&&r.st!=='warnok'}).map(function(r){return r.n}); }
+function ouenOf(day){ if(!day.ouen) day.ouen=[]; return day.ouen; }
+function canDay(h,day){ return !EXTRA_DAYS[h] || !!EXTRA_DAYS[h]['11/'+day.d]; }
+function freeHelpers(day,exceptPair){
+  if(day.holiday) return [];
+  var used={}; day.rest.forEach(function(r){ if(r.h && r!==exceptPair) used[r.h]=1; });
+  ouenOf(day).forEach(function(o){ used[o.h]=1; });
+  var resting={}; restNames(day).forEach(function(n){resting[n]=1});
+  return HELP.filter(function(h){ return !used[h] && !resting[h] && canDay(h,day); });
+}
+// 入れない理由（why）か、ほかの所から移せる（from）かを返す
+function whyNot(day,h,pair){
+  if(!canDay(h,day)) return {why:'入れる日ではない'};
+  if(restNames(day).indexOf(h)>=0) return {why:'休み'};
+  if(ouenOf(day).some(function(o){return o.h===h})) return {why:'応援に入っている'};
+  var u=day.rest.filter(function(r){return r.h===h && r!==pair})[0];
+  if(u && (u.st==='warn'||u.st==='warnok')) return {why:'要確認の所'};
+  if(u) return {from:u};
+  return {};
+}
+
+// 1マス（休む人＋ヘルプ）。かんたん・くわしく の両方で同じものを使う
+function pairHTML(r,di,ri){
+  var cls='pair'+(r.st==='warn'?' warn':''), hh;
+  if(r.st==='warnok') cls+=' warnok';
+  if(!r.h && !r.helper && r.st!=='warn') cls+=' open';
+  if(r.st==='draft') cls+=' draftc';
+  if(swapSel && swapSel.type==='pair' && swapSel.di===di && swapSel.ri===ri) cls+=' sel';
+  var kyan=(r.st==='warn'||r.st==='warnok')?'<em class="kyan">休キャン</em>':'';
+  if(r.st==='warn') hh='<span class="h">'+esc(r.h)+' 要確認</span>';
+  else if(r.st==='warnok') hh='<span class="h">出勤＋'+esc(r.h)+'（2人）</span>';
+  else if(!r.h) hh='<span class="h none">未定</span>';
+  else if(r.st==='draft') hh='<span class="h draft">'+esc(r.h)+'</span>';
+  else hh='<span class="h fix">'+esc(r.h)+(TEATE[r.h]?'<small>手当</small>':'')+'</span>';
+  if(r.helper) hh='<span class="h" style="color:var(--mute);font-size:12px">'+(r.yukyu?'有給':'ヘルプの人')+'</span>';
+  return '<button type="button" class="'+cls+'" data-d="'+di+'" data-r="'+ri+'"'+(r.helper?' disabled':'')+'><span class="r">'+esc(r.n)+kyan+'</span>'+hh+'</button>';
+}
+function ouenHTML(o,di,oi){ return '<button type="button" class="ouen" data-d="'+di+'" data-o="'+oi+'"><span>応援</span><b>'+esc(o.h)+'</b><em>'+esc(o.s)+'</em></button>'; }
+function freeHTML(d,di){
+  var f=freeHelpers(d);
+  return '<div class="free">'+(f.length?'<span>空き</span>'+f.map(function(x){return '<button type="button" class="freebtn'+(swapSel&&swapSel.type==='free'&&swapSel.di===di&&swapSel.h===x?' sel':'')+'" data-d="'+di+'" data-h="'+esc(x)+'">'+esc(x)+'</button>'}).join(''):'空きなし')+'</div>';
+}
+// 押したときの動きも両方で同じ（候補の窓・2か所を押して入れ替え・休キャンの窓・空きの窓）
+function bindCells(root){
+  Array.prototype.forEach.call(root.querySelectorAll('.pair'),function(b){
+    b.addEventListener('click',function(){ if(swapOn) swapTap(+b.dataset.d,+b.dataset.r); else openSheet(+b.dataset.d,+b.dataset.r); });
+  });
+  Array.prototype.forEach.call(root.querySelectorAll('.freebtn'),function(b){
+    b.addEventListener('click',function(){ if(swapOn) swapPick({type:'free',di:+b.dataset.d,h:b.dataset.h}); else openFree(+b.dataset.d,b.dataset.h); });
+  });
+  Array.prototype.forEach.call(root.querySelectorAll('.ouen'),function(b){
+    b.addEventListener('click',function(){ openOuen(+b.dataset.d,+b.dataset.o); });
+  });
+}
+function renderKantan(){
+  var W=WEEKS[wi], h='';
+  W.days.forEach(function(d){ h+='<div class="hd"><b>'+d.d+'</b><span>'+d.w+'</span></div>'; });
+  W.days.forEach(function(d,di){
+    h+='<div class="col">';
+    if(d.holiday){ h+='<div class="free" style="margin-top:0;border:0">'+esc(d.holiday)+'</div>'; }
+    d.rest.forEach(function(r,ri){ h+=pairHTML(r,di,ri); });
+    ouenOf(d).forEach(function(o,oi){ h+=ouenHTML(o,di,oi); });
+    if(!d.holiday) h+=freeHTML(d,di);
+    h+='</div>';
+  });
+  $('kgrid').innerHTML=h;
+  bindCells($('kgrid'));
+}
+function renderKuwashiku(){
+  var W=WEEKS[wi], rows=[], idx={};
+  function add(s,t){ if(!(s in idx)){ idx[s]=rows.length; rows.push({s:s,t:t||''}); } }
+  W.days.forEach(function(d){ d.rest.forEach(function(r){ if(!r.helper) add(r.s); }); ouenOf(d).forEach(function(o){ add(o.s); }); });
+  if(showAll) ALLSTORES.forEach(function(x){ add(x.s,x.t); });
+  $('allStores').textContent=showAll?'休み・空きのある店だけ':'全店を見る';
+  var t='<tr><th class="store">店</th>'+W.days.map(function(d){return '<th><b>'+d.d+'</b><span>'+d.w+'</span></th>'}).join('')+'</tr>';
+  rows.forEach(function(row){
+    t+='<tr><td class="store">'+esc(row.s)+'</td>';
+    W.days.forEach(function(d,di){
+      if(d.holiday){ t+='<td class="hol">休業</td>'; return; }
+      var c='';
+      d.rest.forEach(function(r,ri){ if(!r.helper && r.s===row.s) c+=pairHTML(r,di,ri); });
+      ouenOf(d).forEach(function(o,oi){ if(o.s===row.s) c+=ouenHTML(o,di,oi); });
+      if(!c) c='<span class="okc">出勤'+(row.t?' '+esc(row.t):'')+'</span>';
+      var hb=HIBAN[row.s]&&HIBAN[row.s][d.w]; if(hb) c+='<span class="hiban">非番 '+esc(hb)+'</span>';
+      t+='<td>'+c+'</td>';
+    });
+    t+='</tr>';
+  });
+  if(W.days.some(function(d){return d.rest.some(function(r){return r.helper})})){
+    t+='<tr><td class="store">ヘルプの人の休み</td>';
+    W.days.forEach(function(d,di){ var c=''; d.rest.forEach(function(r,ri){ if(r.helper) c+=pairHTML(r,di,ri); }); t+='<td'+(d.holiday?' class="hol"':'')+'>'+c+'</td>'; });
+    t+='</tr>';
+  }
+  t+='<tr class="freerow"><td class="store">空き（行き先のないヘルプ）</td>';
+  W.days.forEach(function(d,di){ t+=d.holiday?'<td class="hol"></td>':'<td>'+freeHTML(d,di)+'</td>'; });
+  t+='</tr>';
+  $('ktable').innerHTML=t;
+  bindCells($('ktable'));
+}
+
+// 行き先のないヘルプ：応援（2人目）／有給／待機
+function openFree(di,hname){
+  var d=WEEKS[wi].days[di]; setSheet('free');
+  $('shTitle').textContent=d.d+'日（'+d.w+'） '+hname+'さんは行き先がありません';
+  $('shSub').textContent='どこかの店に応援（2人で入る）で入れるか、有給にするか、このまま待機にするかを選んでください。';
+  var c='<div class="grp">応援に入れる店（今日・明日の行き先と一緒に送ります）</div>';
+  STORES.forEach(function(s){ c+='<button class="cand ouenbtn" type="button" data-s="'+esc(s)+'">'+esc(s)+'</button>'; });
+  c+='<div class="grp">そのほか</div><button class="cand yukyubtn" type="button" id="fYukyu">有給で休みにする（本人に確かめてから）</button>';
+  c+='<button class="cand plain" type="button" id="fWait">待機のまま（何もしない）</button>';
+  $('shCands').innerHTML=c;
+  Array.prototype.forEach.call($('shCands').querySelectorAll('[data-s]'),function(b){
+    b.addEventListener('click',function(){ ouenOf(d).push({h:hname,s:b.dataset.s}); closeSheet(); toast(hname+'さんを '+b.dataset.s+' に応援で入れました（送るまで本人には届きません）'); });
+  });
+  $('fYukyu').addEventListener('click',function(){ d.rest.push({n:hname,s:'ヘルプ',h:null,helper:true,yukyu:true}); closeSheet(); toast(hname+'さんを有給の休みにしました'); });
+  $('fWait').addEventListener('click',closeSheet);
+  $('shade').hidden=false; $('sheet').hidden=false;
+}
+function openOuen(di,oi){
+  var d=WEEKS[wi].days[di], o=ouenOf(d)[oi]; setSheet('free');
+  $('shTitle').textContent=d.d+'日（'+d.w+'） '+o.h+'さん：'+o.s+'に応援';
+  $('shSub').textContent='応援をやめると、'+o.h+'さんは空いているヘルプに戻ります。';
+  $('shCands').innerHTML='<button class="cand plain" type="button" id="oDel">応援をやめる</button>';
+  $('oDel').addEventListener('click',function(){ ouenOf(d).splice(oi,1); closeSheet(); toast(o.h+'さんの応援をやめました'); });
+  $('shade').hidden=false; $('sheet').hidden=false;
+}
+function setSheet(kind){
+  $('sheet').className='sheet'+(kind==='warn'?' wmode':kind==='free'?' fmode':'');
+  $('shClear').hidden=kind!=='pick';
+}
+
+function render(){
+  $('wlabel').textContent=WEEKS[wi].label;
+  $('prev').disabled=wi===0; $('next').disabled=wi===WEEKS.length-1;
+  $('mKantan').setAttribute('aria-pressed',mode==='kantan');
+  $('mKuwashiku').setAttribute('aria-pressed',mode==='kuwashiku');
+  $('vKantan').hidden=mode!=='kantan'; $('vKuwashiku').hidden=mode!=='kuwashiku';
+  $('undo').hidden=!undoSnap || undoSnap.w!==wi;
+  $('fixall').hidden=!WEEKS[wi].days.some(function(d){return d.rest.some(function(r){return r.st==='draft'})});
+  if(mode==='kantan') renderKantan(); else renderKuwashiku();
+}
+function setMode(m){ mode=m; try{localStorage.setItem('shiftDemoMode',m)}catch(e){} render(); }
+
+// 2か所を押して入れ替え（1回入れ替えたら、または やめる で自動で元に戻る）
+var swapOn=false, swapSel=null;
+function swapOff(){ swapOn=false; swapSel=null; $('swapbar').hidden=true; $('swapBtn').classList.remove('on'); $('swapHint').hidden=true; render(); }
+function swapPick(sel){
+  var d=WEEKS[wi].days[sel.di];
+  if(sel.type==='pair'){ var r=d.rest[sel.ri]; if(r.st==='warn'||r.st==='warnok'){ toast('休キャンの所は入れ替えできません'); return; } }
+  if(!swapSel){ swapSel=sel; render(); return; }
+  var same=swapSel.type===sel.type && swapSel.di===sel.di && (sel.type==='pair'?swapSel.ri===sel.ri:swapSel.h===sel.h);
+  if(same){ swapSel=null; render(); return; }
+  if(swapSel.di!==sel.di){ toast('同じ日の中で押してください'); return; }
+  if(swapSel.type==='free' && sel.type==='free'){ toast('空いているヘルプどうしは入れ替えられません。マスを押してください'); return; }
+  var txt, run;
+  if(swapSel.type==='pair' && sel.type==='pair'){
+    var a=d.rest[swapSel.ri], b=d.rest[sel.ri];
+    if(!a.h && !b.h){ toast('どちらも未定なので入れ替える人がいません'); swapSel=null; render(); return; }
+    txt=a.h&&b.h ? a.h+'さん（'+a.n+'）と '+b.h+'さん（'+b.n+'）を入れ替えますか' : (a.h||b.h)+'さんを '+(a.h?b.n:a.n)+'さんの所へ移しますか（元の所は未定）';
+    run=function(){ var h1=a.h; a.h=b.h; a.st=b.h?'fix':null; b.h=h1; b.st=h1?'fix':null; };
+  } else {
+    var fr=swapSel.type==='free'?swapSel:sel, pr=swapSel.type==='pair'?swapSel:sel, p=d.rest[pr.ri];
+    txt=p.h ? fr.h+'さん（空き）と '+p.h+'さん（'+p.n+'）を入れ替えますか（'+p.h+'さんは空きに戻る）' : fr.h+'さんを '+p.n+'さんの所に入れますか';
+    run=function(){ p.h=fr.h; p.st='fix'; };
+  }
+  var bar=$('swapbar'); bar.innerHTML='<b>'+esc(txt)+'</b><button type="button" id="sbYes" style="background:#ffd400;color:#2b2200">入れ替える</button><button type="button" id="sbNo" style="background:#fff;color:#1f3f5b">やめる</button>';
+  bar.hidden=false;
+  $('sbYes').addEventListener('click',function(){ run(); undoSnap=null; swapOff(); toast('入れ替えました'); });
+  $('sbNo').addEventListener('click',swapOff);
+}
+function swapTap(di,ri){ swapPick({type:'pair',di:di,ri:ri}); }
+var pickMode='swap';
+function openSheet(di,ri){
+  var d=WEEKS[wi].days[di], r=d.rest[ri]; cur={d:d,r:r,di:di,ri:ri};
+  $('shTitle').textContent=d.d+'日（'+d.w+'） '+r.n+'さんの休み（'+r.s+'）';
+  // 休みが取り消された所：ヘルプは選ばせず、「外す」か「2人で出す」の2択だけ
+  if(r.st==='warn'||r.st==='warnok'){
+    setSheet('warn');
+    $('shTitle').textContent='⚠ 休みの取り消し：'+d.d+'日（'+d.w+'） '+r.n+'さん（'+r.s+'）';
+    $('shSub').textContent='ここはヘルプを選ぶ所ではありません。'+r.n+'さんが出勤するので、もう入れてある'+r.h+'さんを外すかどうかを決めます。';
+    $('shCands').innerHTML='<button class="cand wbtn" type="button" id="wRemove">'+esc(r.h)+'さんを外す<small>'+esc(r.n)+'さん1人で出る。'+esc(r.h)+'さんは空きに戻る</small></button>'+
+      '<button class="cand wbtn alt" type="button" id="wKeep">外さない<small>'+esc(r.n)+'さんと'+esc(r.h)+'さんの2人で出る</small></button>';
+    $('wRemove').addEventListener('click',function(){ var h=r.h; d.rest.splice(d.rest.indexOf(r),1); closeSheet(); toast(h+'さんを外しました。'+h+'さんは空いているヘルプに戻りました'); });
+    $('wKeep').addEventListener('click',function(){ r.st='warnok'; closeSheet(); toast(r.n+'さんと'+r.h+'さんの2人で出る形にしました'); });
+    $('shade').hidden=false; $('sheet').hidden=false; return;
+  }
+  setSheet('pick');
+  $('shSub').textContent='入るヘルプを押してください。ほかの所に決まっている人を押したときの動きは、下の切り替えで決まります。';
+  var c='<div class="seg" role="group" aria-label="ほかの所の人を選んだとき"><button type="button" data-pm="swap" aria-pressed="'+(pickMode==='swap')+'">⇄ 入れ替え</button><button type="button" data-pm="move" aria-pressed="'+(pickMode==='move')+'">→ 移動（元は未定）</button></div>';
+  var lab=function(x){ return (pickMode==='swap'&&r.h) ? x.from.n+'さんと入れ替え' : x.from.n+'さんの所から移動'; };
+  HELP.forEach(function(h){
+    var x=whyNot(d,h,r), t=TEATE[h]?'・手当':'';
+    if(r.h===h) c+='<button class="cand" type="button" disabled>'+esc(h)+'（いまここ）</button>';
+    else if(x.why) c+='<button class="cand" type="button" disabled>'+esc(h)+'（'+esc(x.why)+'）</button>';
+    else if(x.from) c+='<button class="cand move" type="button" data-h="'+esc(h)+'">'+esc(h)+'（'+esc(lab(x))+t+'）</button>';
+    else c+='<button class="cand" type="button" data-h="'+esc(h)+'">'+esc(h)+(t?'（手当）':'')+'</button>';
+  });
+  c+='<div class="grp">ほかの販売員（ほかの店に入った日はヘルプ手当が付く人。自分の休みの日でも、都合がつけば入れます）</div>';
+  FLEX.forEach(function(h){
+    if(r.n===h) return;
+    var x=whyNot(d,h,r), rest=restNames(d).indexOf(h)>=0;
+    if(r.h===h) c+='<button class="cand flex" type="button" disabled>'+esc(h)+'（いまここ）</button>';
+    else if(x.from) c+='<button class="cand flex" type="button" data-h="'+esc(h)+'">'+esc(h)+'（'+esc(lab(x))+'・手当）</button>';
+    else c+='<button class="cand flex" type="button" data-h="'+esc(h)+'">'+esc(h)+(rest?'（休みの日・本人に確かめてから・手当）':'（手当）')+'</button>';
+  });
+  c+='<button class="cand" type="button" disabled>そのほかの販売員（本番では全員から選べます）</button>';
+  $('shCands').innerHTML=c;
+  $('shClear').hidden=!r.h;
+  Array.prototype.forEach.call($('shCands').querySelectorAll('[data-h]'),function(b){
+    b.addEventListener('click',function(){
+      var h=b.dataset.h, x=whyNot(d,h,r);
+      var from=x.from, old=r.h;
+      if(from && pickMode==='swap' && old){ from.h=old; from.st='fix'; r.h=h; r.st='fix'; undoSnap=null; closeSheet(); toast(h+'さんと'+old+'さんを入れ替えました'); return; }
+      if(from){ from.h=null; from.st=null; }
+      r.h=h; r.st='fix'; undoSnap=null; closeSheet();
+      toast(r.n+'さんの所に '+h+'さん を入れました'+(from?'。'+from.n+'さんの所は「未定」です':''));
+    });
+  });
+  Array.prototype.forEach.call($('shCands').querySelectorAll('[data-pm]'),function(b){
+    b.addEventListener('click',function(){ pickMode=b.dataset.pm; openSheet(cur.di,cur.ri); });
+  });
+  $('shade').hidden=false; $('sheet').hidden=false;
+}
+function closeSheet(){ $('shade').hidden=true; $('sheet').hidden=true; render(); }
+$('shClear').addEventListener('click',function(){
+  var h=cur.r.h; cur.r.h=null; cur.r.st=null; undoSnap=null; closeSheet(); if(h) toast(h+'さんを外しました（「未定」に戻りました）');
+});
+$('fixall').addEventListener('click',function(){
+  var n=0; WEEKS[wi].days.forEach(function(d){ d.rest.forEach(function(r){ if(r.st==='draft'){ r.st='fix'; n++; } }); });
+  undoSnap=null; render(); toast('案'+n+'件を決めました（送るまで本人には届きません）');
+});
+$('shClose').addEventListener('click',closeSheet);
+$('shade').addEventListener('click',closeSheet);
+
+$('auto').addEventListener('click',function(){
+  undoSnap={w:wi,data:JSON.stringify(WEEKS[wi])};
+  var n=0;
+  WEEKS[wi].days.forEach(function(d){
+    d.rest.forEach(function(r){ if(r.st==='draft'){ r.h=null; r.st=null; } });
+    d.rest.forEach(function(r){
+      if(r.h||r.helper||r.st==='warn'||r.st==='warnok') return;
+      var f=freeHelpers(d); if(f.length){ r.h=f[0]; r.st='draft'; n++; }
+    });
+  });
+  render(); toast(n?('案を'+n+'件入れました（点線）。直してから送ってください'):'入れられる所がありませんでした');
+});
+$('undo').addEventListener('click',function(){ if(!undoSnap) return; WEEKS[undoSnap.w]=JSON.parse(undoSnap.data); undoSnap=null; render(); toast('案を入れる前に戻しました'); });
+
+function send(label){
+  var drafts=0, ou=0; WEEKS[wi].days.forEach(function(d){ d.rest.forEach(function(r){ if(r.st==='draft'){drafts++; r.st='fix';} }); ou+=ouenOf(d).length; });
+  undoSnap=null; render(); toast('（デモ）'+label+'を送りました'+(ou?'（応援'+ou+'件も一緒に）':'')+(drafts?'。案'+drafts+'件も決まりになりました':''));
+}
+$('sToday').addEventListener('click',function(){send('今日の行き先')});
+$('sTom').addEventListener('click',function(){send('明日の行き先')});
+$('sWeek').addEventListener('click',function(){send('この週の予定')});
+$('swapBtn').addEventListener('click',function(){ if(swapOn){ swapOff(); return; } swapOn=true; swapSel=null; $('swapBtn').classList.add('on'); $('swapHint').hidden=false; render(); });
+$('allStores').addEventListener('click',function(){ showAll=!showAll; render(); });
+$('mKantan').addEventListener('click',function(){setMode('kantan')});
+$('mKuwashiku').addEventListener('click',function(){setMode('kuwashiku')});
+$('prev').addEventListener('click',function(){ if(wi>0){wi--;render();} });
+$('next').addEventListener('click',function(){ if(wi<WEEKS.length-1){wi++;render();} });
+
+var tt; function toast(m){ var t=$('toast'); t.textContent=m; t.hidden=false; clearTimeout(tt); tt=setTimeout(function(){t.hidden=true},2600); }
+render();
+</script>
+</body>
+</html>
