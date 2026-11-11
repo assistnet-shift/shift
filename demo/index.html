@@ -131,7 +131,7 @@ tr.freerow .free{border-top:0;margin-top:0;padding-top:0}
 <div class="band"><span>週間シフト</span><small>販売員シフト管理（練習用デモ）</small></div>
 
 <main>
-  <div class="demo">練習用のデモです。名前・休み・ヘルプは見本で、本物のデータにはつながっていません。何を押しても本番には影響しないので、自由に試してください。開き直すと元に戻ります。「くわしく」は、かんたんと同じマス・同じ操作を、左に店の名前を付けて並べたものです（非番の人も出ます）。</div>
+  <div class="demo">練習用のデモです。名前・休み・ヘルプは見本で、本物のデータにはつながっていません。何を押しても本番には影響しないので、自由に試してください。開き直すと元に戻ります。「くわしく」は、かんたんと同じマス・同じ操作を、左に店の名前を付けて並べたものです（非番の人も出ます）。並び順は、その月にヘルプが要る日が多い店から（住友中野はいつも一番上）で、かんたん・くわしくとも同じです。</div>
 
   <div class="bar">
     <div class="toggle" role="group" aria-label="表示の切り替え">
@@ -207,6 +207,11 @@ var ALLSTORES=[{s:'第一生命ビル',t:'横尾'},{s:'センタービル',t:'�
 // 非番（その店の担当で、この日は出ない人＝頼める相手）の見本
 var HIBAN={'豊洲':{'火':'舘岡','木':'舘岡'},'第一生命ビル':{'水':'佐々木'}};
 var showAll=false;
+// 並び順：その月に「ヘルプが要る日」（営業日−担当が契約で出る日のうち休みでない日）が多い店から。住友中野はいつも一番上（数字は見本）
+var PIN=['住友中野ビル'];
+var NEED={'住友中野ビル':19,'三井':10,'赤坂':9,'新宿野村ビル':7,'太陽生命品川':5,'丸の内':4,'渋谷クロス':4,'汐留':4,'蒲田アロマスクエア':4,'大手町':3,'豊洲':3,'大森':2,'総務省':2,'虎ノ門ツイン':2,'テレコム':1,'パレスサイドビル':1,'第一生命ビル':0,'センタービル':0};
+function rankOf(s){ var p=PIN.indexOf(s); return p>=0 ? -1000+p : -(NEED[s]||0); }
+function orderIdx(day){ return day.rest.map(function(r,i){return i}).sort(function(a,b){ var A=day.rest[a],B=day.rest[b]; if(!!A.helper!==!!B.helper) return A.helper?1:-1; return (rankOf(A.s)-rankOf(B.s)) || (a-b); }); }
 // 見本の週（11/16〜20・11/23〜27）
 var WEEKS=[
  {label:'11/16〜11/20',days:[
@@ -289,7 +294,7 @@ function renderKantan(){
   W.days.forEach(function(d,di){
     h+='<div class="col">';
     if(d.holiday){ h+='<div class="free" style="margin-top:0;border:0">'+esc(d.holiday)+'</div>'; }
-    d.rest.forEach(function(r,ri){ h+=pairHTML(r,di,ri); });
+    orderIdx(d).forEach(function(ri){ h+=pairHTML(d.rest[ri],di,ri); });
     ouenOf(d).forEach(function(o,oi){ h+=ouenHTML(o,di,oi); });
     if(!d.holiday) h+=freeHTML(d,di);
     h+='</div>';
@@ -302,6 +307,7 @@ function renderKuwashiku(){
   function add(s,t){ if(!(s in idx)){ idx[s]=rows.length; rows.push({s:s,t:t||''}); } }
   W.days.forEach(function(d){ d.rest.forEach(function(r){ if(!r.helper) add(r.s); }); ouenOf(d).forEach(function(o){ add(o.s); }); });
   if(showAll) ALLSTORES.forEach(function(x){ add(x.s,x.t); });
+  rows.sort(function(a,b){ return rankOf(a.s)-rankOf(b.s); });
   $('allStores').textContent=showAll?'休み・空きのある店だけ':'全店を見る';
   var t='<tr><th class="store">店</th>'+W.days.map(function(d){return '<th><b>'+d.d+'</b><span>'+d.w+'</span></th>'}).join('')+'</tr>';
   rows.forEach(function(row){
